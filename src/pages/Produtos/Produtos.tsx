@@ -7,20 +7,30 @@ import { getBolos } from '../../services/bolosServices.';
 import CardProduto from '../../components/CardProduto/CardProduto';
 import Carrosel from '../../components/Carrosel/Carrosel';
 import Header from '../../components/Header/Header';
-import { useLocation } from 'react-router-dom';
-
+import { useLocation, useParams } from 'react-router-dom';
+import Footer from '../../components/Footer/Footer';
+import jacquin404 from '../../assets/jacquin-not-found.png'
 //funções assincronas
 export default function Produtos() {
     const [bolos, setBolos] = useState<bolo[]>([]);
     const location = useLocation();
+    const { categoria } = useParams<{categoria: string}>();
+
     const parametrosPesquisados = new URLSearchParams(location.search);
     const termo_pesquisado = parametrosPesquisados.get('query')
 
 
     const fetchBolos = async () => {   //async algo q nao se exculta imediatamente  // toda vez que usa uma async se usa um await     
         try {
+
             const dados = await getBolos();
-            if (termo_pesquisado) {
+
+             if (categoria){
+                const dados_filtrados = dados.filter(b => b.categorias.some (cat => 
+                    cat.toLowerCase() === categoria.toLowerCase()));
+                    setBolos (dados_filtrados)
+             }
+            else if (termo_pesquisado) {
                 const dados_filtrados = dados.filter(b =>
                     b.nome.toLowerCase().includes(termo_pesquisado.toLowerCase()) ||
                     b.descricao.toLowerCase().includes(termo_pesquisado.toLowerCase()) ||
@@ -28,8 +38,8 @@ export default function Produtos() {
                 )
                 setBolos(dados_filtrados)
             } else {
-                console.log("dados retornados da API:")
-                setBolos(dados);
+                console.error("Nenhuma catyegoria ou termo de busca definido.")
+                setBolos([]);
 
             }
 
@@ -59,7 +69,10 @@ export default function Produtos() {
                     <div className="titulo">
                         <span>
                                 {
-                                    termo_pesquisado ? `Resultados para: ${termo_pesquisado}` :
+                                  categoria
+                                  ? categoria.charAt(0).toUpperCase() + categoria.slice(1).toLowerCase()
+                                  :termo_pesquisado 
+                                   ? `Resultados para: ${termo_pesquisado}` :
                                     "nome da categoria "
                                 }
                         </span>
@@ -79,17 +92,16 @@ export default function Produtos() {
                                         imagem={b.imagens[0]}
                                         peso={b.peso}
                                     />
-
-
-
-
-
-
-
                                 );
                             })
                         }
-
+                        {
+                            bolos.length == 0 &&
+                            <div className= 'jacquin404'>
+                                <h3> o termo pesquisado <br /> não foi encontrado </h3>
+                                <img src={jacquin404} alt="foto_termo_não_encontrado" />
+                            </div>
+                        }
 
                     </section>
                 </section>
@@ -99,6 +111,8 @@ export default function Produtos() {
                     <img src={what} />
                 </a>
             </main>
+            
+            <Footer />
         </>
     )
 }
