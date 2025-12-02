@@ -1,21 +1,68 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ChangeEvent } from 'react';
 import Footer from '../../components/Footer/Footer'
 import Header from '../../components/Header/Header'
 import './Cadastro.css'
 import type { bolo } from '../../types/Bolo';
-import { getBolos } from '../../services/bolosServices.';
+import { deleteBolo, getBolos } from '../../services/bolosServices.';
 import { formatosServices } from '../../services/formatoService';
+import ModalCustomizado from '../../components/ModalCustomizado/ModalCustomizado';
+import { NumericFormat } from 'react-number-format';
 export default function Cadastro() {
 
     const [bolos, setBolos] = useState<bolo[]>([]);
 
-    const [clicouNaLixeira, setClicouNaLixeira] = useState <boolean> (false);
+    const [clicouNaLixeira, setClicouNaLixeira] = useState<boolean>(false);
     const [idParaDeletar, setIdParaDeletar] = useState<string>("");
+    const [AposConfirmacaoDeBoloRemovido, setAposConfirmacaoDeBoloRemovido] =
+        useState<boolean>(false);
+
+    const [propsModalDeErrorOuSucesso, setPropsModalDeErrorOuSucesso] = useState<{
+        exibir: boolean, titulo: string, corpo: string
+    }>({ exibir: false, titulo: "", corpo: "" });
+
+
+    const [nomeBolo, setNomeBolo] = useState<string>("");
+    const [categorias, setCategorias] = useState<string>("");
+    const [imagem, setImagem] = useState<File | undefined>(undefined);
+    const [preco, setPreco] = useState<number | undefined>(undefined);
+
+    const [preso, setPeso,] = useState<number | undefined>(undefined);
+    const [descricao, setDescricao,] = useState<string>("");
+    const [bgImageInputColor, setBgImageInputColor] = useState<string>(" #ffffff")
+
+
+
 
     const abrirModalParaConfirmarDelete = (id: string) => {
         setClicouNaLixeira(true);
         setIdParaDeletar(id);
     }
+
+    const fecharModalConfirmacaoDelete = () => {
+        setClicouNaLixeira(false);
+
+    }
+
+    const fecharModalDeErroOuSucesso = () => {
+        setPropsModalDeErrorOuSucesso({ ...propsModalDeErrorOuSucesso, exibir: false }); //... spread operator / operador de espalhamento
+    }
+
+    const exibirModalDeErroOuSucesso = (titulo: string, corpo: string) => {
+        setPropsModalDeErrorOuSucesso({ exibir: true, titulo, corpo });
+    }
+
+    const removerItemAposConfirmacao = async (id: string) => {
+
+        try {
+            await deleteBolo(id);
+            setAposConfirmacaoDeBoloRemovido(true);
+            await fetchBolos();
+            fecharModalConfirmacaoDelete();
+        } catch (error) {
+            exibirModalDeErroOuSucesso("erro", "Erro ao deletar o bolo");
+        }
+    }
+
 
     const fetchBolos = async () => {
         try {
@@ -26,8 +73,20 @@ export default function Cadastro() {
         } catch (error) {
             console.error("Erro ao executar getBolos", error);
         }
-        
+
     }
+
+    const carregarImagem = (img: ChangeEvent<HTMLInputElement>) => {
+        const file = img.target.files?.[0];
+        if (file.type.includes("images")) {
+            setBgImageInputColor(" #5cb85c");
+        }
+        else {
+            setImagem
+            setBgImageInputColor(" #ff2c2c")
+        }
+    }
+
     useEffect(() => {
         fetchBolos();
     }, [])
@@ -48,13 +107,25 @@ export default function Cadastro() {
                         <div className="cadastro_coluna1">
                             <div className="bolos">
                                 <label htmlFor="bolo">Bolo</label>
-                                <input type="text" name="" id="bolo" />
+                                <input
+                                    type="text"
+                                    id="bolo"
+                                    placeholder='Insira o nome do bolo'
+                                    value={nomeBolo}
+                                    onChange={e => setNomeBolo(e.target.value)}
+                                />
                             </div>
 
                             <div className="categoria_img">
                                 <div className="categoria">
                                     <label htmlFor="cat">Categoria</label>
-                                    <input type="text" name="" id="cat" />
+                                    <input
+                                        type="text"
+                                        id="cat"
+                                        placeholder='chocolate , Morango, coco...'
+                                        value={categorias}
+                                        onChange={c => setCategorias(c.target.value)}
+                                    />
                                 </div>
                                 <div className="img">
                                     <label htmlFor="img">
@@ -67,19 +138,45 @@ export default function Cadastro() {
                                             </svg>
                                         </div>
                                     </label>
-                                    <input type="file" name="" id="img" />
+                                    <input
+                                        type="file"
+                                        id="img"
+                                        accept=""
+                                        onChange={carregarImagem}
+
+
+                                    />
                                 </div>
                             </div>
 
                             <div className="valor_peso">
                                 <div className="valor">
                                     <label htmlFor="val">Valor</label>
-                                    <input type="text" name="" id="val" />
+                                    <NumericFormat
+                                        id='val'
+                                        placeholder='Insira o preço (R$)'
+                                        value={preco ?? ""}
+                                        thousandSeparator="."
+                                        decimalSeparator=','
+                                        prefix='R$'
+                                        decimalScale={2}
+                                        fixedDecimalScale
+                                        allowNegative={false}
+                                        onValueChange={(values) => { setPreco(values.floatValue ?? undefined)}}
+                                        inputMode='decimal'
+                                        />
                                 </div>
 
                                 <div className="peso">
-                                    <label htmlFor="peso">Peso</label>
-                                    <input type="text" name="" id="peso" />
+            
+                            <label htmlFor="peso">Peso</label>
+                                     <NumericFormat
+                                     
+                                     
+                                     />
+
+
+
                                 </div>
                             </div>
                         </div>
@@ -112,10 +209,10 @@ export default function Cadastro() {
                                 bolos.map((b: bolo) => (
                                     <tr>
                                         <td data-cell="Bolo: ">{b.nome}</td>
-                                        <td data-cell="Categoria: ">{b.categorias.map (c => c.charAt(0).toUpperCase() + c.slice(1)).join(", ")}</td>
-                                        <td data-cell="Descrição: ">{b.descricao || "não informado" }</td>
+                                        <td data-cell="Categoria: ">{b.categorias.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(", ")}</td>
+                                        <td data-cell="Descrição: ">{b.descricao || "não informado"}</td>
                                         <td data-cell="Valor: ">{formatosServices.PrecoBR(b.preco)}</td>
-                                        <td data-cell="Peso: ">{b.peso ? formatosServices.PesoEmKG(b.peso):  "Nâo cadastrado"}</td>
+                                        <td data-cell="Peso: ">{b.peso ? formatosServices.PesoEmKG(b.peso) : "Nâo cadastrado"}</td>
                                         <td>
                                             <svg onClick={() => abrirModalParaConfirmarDelete(b.id!)} xmlns="http://www.w3.org/2000/svg"
                                                 viewBox="0 0 640 640">htmlFor
@@ -131,8 +228,31 @@ export default function Cadastro() {
                     </table>
                 </section>
             </main>
-
             <Footer />
+            <ModalCustomizado
+                mostrarModalQuando={clicouNaLixeira}  //apos o chamado ele vira true...
+                aoCancelar={fecharModalConfirmacaoDelete}
+                titulo='Confirmar exclusão'
+                corpo='Tem certeza que deseja remover este item?'
+                customizarBotoes={true}
+                textoBotaoConfirmacao='Excluir'
+                textoBotaoCancelamenmto='Cancelar'
+                aoConfirmar={() => removerItemAposConfirmacao(idParaDeletar)}
+                exibirConteudoCentralizado={true}
+            />
+            <ModalCustomizado
+                mostrarModalQuando={AposConfirmacaoDeBoloRemovido}
+                aoCancelar={() => setAposConfirmacaoDeBoloRemovido(false)}
+                titulo='Sucesso'
+                corpo='Bolo removido!'
+            />
+            <ModalCustomizado
+                mostrarModalQuando={propsModalDeErrorOuSucesso.exibir}
+                aoCancelar={fecharModalDeErroOuSucesso}
+                titulo={propsModalDeErrorOuSucesso.titulo}
+                corpo={propsModalDeErrorOuSucesso.corpo}
+                exibirConteudoCentralizado={true}
+            />
         </>
     )
 }
